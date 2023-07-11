@@ -11,7 +11,7 @@ import pygsheets
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 
 
-class UsersInfo():
+class UsersInfo:
 
     def __init__(self, user_id):
         if type(user_id) == str:
@@ -21,37 +21,37 @@ class UsersInfo():
         self.login = user_id
 
     def get_accounts_info(self, table_type):
-
         config = configparser.ConfigParser()  # создаём объекта парсера
         config.read("/Users/Taisia1/Desktop/octacode/deposite/config.ini")  # читаем конфиг
         domain = config["userInfo"]["domain"]
         login = config["userInfo"]["login"]
         password = config["userInfo"]["passwd"]
-        url = config["userInfo"]["url"]
+        url_get = config["userInfo"]["url_get"]
+
         if self.flag == list:
             df = pd.DataFrame()
             for up in user_id:
                 r = json.dumps(
                     requests.get(
-                        f'{url}/{domain}/{up}',
+                        f'{url_get}/{domain}/{up}',
                         auth=HTTPBasicAuth(login, password)).json())
                 r = json.loads(r)
                 new_df = pd.DataFrame(r['accounts'])
                 new_df['user_id'] = up
                 df = pd.concat([df, new_df], ignore_index=True)
-
         else:
             r = json.dumps(
-                requests.get(f'{url}/{domain}/{self.login}',
+                requests.get(f'{url_get}/{domain}/{self.login}',
                              auth=HTTPBasicAuth(login, password)).json())
             r = json.loads(r)
             df = pd.DataFrame(r['accounts'])
-
+            df['user_id'] = self.login
         categories = pd.DataFrame()
         for row in range(len(df)):
             categories = pd.concat([categories,
                                     pd.DataFrame(df['categories'][row]).pivot_table(columns='category', values='value',
-                                                                                    aggfunc=lambda x: ' '.join(x))], axis=0)
+                                                                                    aggfunc=lambda x: ' '.join(x))],
+                                   axis=0)
         df = pd.concat([df.drop(columns='categories'), categories.reset_index()], axis=1)
         df = df.loc[df['clearingCode'] == 'LIVE']
         req = f"""
@@ -69,7 +69,7 @@ class UsersInfo():
         df['price'] = df['price'].fillna(1)
         df['balance_usd'] = (df['balance'].astype(float) * df['price'].astype(float)).round(2)
         df = df.drop(columns={'type', 'brokerCode', 'accountCashType', 'accountType', 'index', 'price'})
-        if table_type == True:
+        if table_type:
             return df[['user_id', 'accountCode', 'currency', 'balance_usd', 'AutoExecution', 'Margining']]
         else:
             return df
@@ -80,13 +80,26 @@ class UsersInfo():
         client = pygsheets.authorize(service_file=key)
         sh = client.open("order_statistics")
         wks = sh.worksheet_by_title('UserInfo')
+        wks.clear()
         wks.set_dataframe(
             df, (1, 1),
             copy_index=False, header=True
         )
 
+    def change_value(self, accountCode, categoryCode, value):
+        config = configparser.ConfigParser()
+        config.read("/Users/Taisia1/Desktop/octacode/deposite/config.ini")
+        login = config["userInfo"]["login"]
+        password = config["userInfo"]["passwd"]
+        url_put = config["userInfo"]["url_put"]
+        r = requests.put(
+            f'{url_put}/{accountCode}/category/{categoryCode}/',
+            json={"value": f"{value}"}, auth=HTTPBasicAuth(login, password))
 
-user_id = ['ud632544530', 'ud632544530']
+
+user_id = 'ud632544530'
 user = UsersInfo(user_id)
-a = (user.google_sheets(1))
+a = (user.change_value("BTC_ud632544530_1", "Margining", "SVT_Leverage_5"))
+
+b = (user.google_sheets(1))
 pass
