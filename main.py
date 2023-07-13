@@ -21,8 +21,8 @@ class UsersInfo:
         self.login = user_id
 
     def get_accounts_info(self, table_type):
-        config = configparser.ConfigParser()  # создаём объекта парсера
-        config.read("/Users/Taisia1/Desktop/octacode/deposite/config.ini")  # читаем конфиг
+        config = configparser.ConfigParser()
+        config.read("/Users/Taisia1/Desktop/octacode/deposite/config.ini")
         domain = config["userInfo"]["domain"]
         login = config["userInfo"]["login"]
         password = config["userInfo"]["passwd"]
@@ -30,20 +30,17 @@ class UsersInfo:
 
         if self.flag == list:
             df = pd.DataFrame()
-            for up in user_id:
-                r = json.dumps(
-                    requests.get(
+            for up in self.login:
+                r = requests.get(
                         f'{url_get}/{domain}/{up}',
-                        auth=HTTPBasicAuth(login, password)).json())
+                        auth=HTTPBasicAuth(login, password)).json()
                 r = json.loads(r)
                 new_df = pd.DataFrame(r['accounts'])
                 new_df['user_id'] = up
                 df = pd.concat([df, new_df], ignore_index=True)
         else:
-            r = json.dumps(
-                requests.get(f'{url_get}/{domain}/{self.login}',
-                             auth=HTTPBasicAuth(login, password)).json())
-            r = json.loads(r)
+            r = requests.get(f'{url_get}/{domain}/{self.login}',
+                             auth=HTTPBasicAuth(login, password)).json()
             df = pd.DataFrame(r['accounts'])
             df['user_id'] = self.login
         categories = pd.DataFrame()
@@ -63,7 +60,6 @@ class UsersInfo:
         engine = conn.connect_api_devex()
         with engine.connect() as con:
             market_data = pd.DataFrame(con.execute(text(req)))
-        market_data['currency'] = (market_data['currency'].astype('str'))
         market_data['currency'] = market_data['currency'].str.partition('/')[0]
         df = df.merge(market_data[['currency', 'price']], how='left', on=['currency'])
         df['price'] = df['price'].fillna(1)
@@ -95,11 +91,3 @@ class UsersInfo:
         r = requests.put(
             f'{url_put}/{accountCode}/category/{categoryCode}/',
             json={"value": f"{value}"}, auth=HTTPBasicAuth(login, password))
-
-
-user_id = 'ud632544530'
-user = UsersInfo(user_id)
-a = (user.change_value("BTC_ud632544530_1", "Margining", "SVT_Leverage_5"))
-
-b = (user.google_sheets(1))
-pass

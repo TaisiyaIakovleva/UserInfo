@@ -2,7 +2,7 @@ import configparser
 from sqlalchemy import create_engine
 
 
-class Connect():
+class Connect:
 
     def connect_api_devex(self):
         config = configparser.ConfigParser()
@@ -18,12 +18,5 @@ class Connect():
             print(err)
         return engine
 
-pass
-# config = configparser.ConfigParser()  # создаём объекта парсера
-# config.read("/Users/Taisia1/Desktop/octacode/deposite/config.ini")  # читаем конфиг
-# username = config["dxcore"]["username"]
-# passwd = config["dxcore"]["passwd"]
-# host = config["dxcore"]["host"]
-# db = config["dxcore"]["db"]
 
 
