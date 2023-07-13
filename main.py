@@ -3,7 +3,10 @@ from requests.auth import HTTPBasicAuth
 import json
 import pandas as pd
 import numpy as np
-import configparser  # импортируем библиотеку
+import configparser
+
+from sqlalchemy.sql.functions import user
+
 from connect import Connect
 from sqlalchemy import create_engine, text
 import gspread
@@ -88,6 +91,14 @@ class UsersInfo:
         login = config["userInfo"]["login"]
         password = config["userInfo"]["passwd"]
         url_put = config["userInfo"]["url_put"]
-        r = requests.put(
-            f'{url_put}/{accountCode}/category/{categoryCode}/',
-            json={"value": f"{value}"}, auth=HTTPBasicAuth(login, password))
+        try:
+            r = requests.put(
+                f'{url_put}/{accountCode}/category/{categoryCode}/',
+                json={"value": f"{value}"}, auth=HTTPBasicAuth(login, password))
+            if r.status_code == 204:
+                print("Запрос успешно выполнен")
+            else:
+                print("Запрос не выполнен")
+            print("Код статуса:", r.status_code)
+        except Exception as err:
+            print("Ошибка:", err)
