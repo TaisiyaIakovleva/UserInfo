@@ -1,5 +1,6 @@
 import requests
 from requests.auth import HTTPBasicAuth
+from requests import HTTPError
 import json
 import pandas as pd
 import numpy as np
@@ -21,7 +22,6 @@ class UsersInfo:
             self.flag = list
         self.login = user_id
 
-
     def get_accounts_info(self, table_type):
         config = configparser.ConfigParser()
         config.read("/Users/Taisia1/Desktop/octacode/deposite/config.ini")
@@ -35,27 +35,26 @@ class UsersInfo:
                 try:
                     response = requests.get(
                             f'{url_get}/{domain}/{up}',
-                            auth=HTTPBasicAuth(login, password))
-                    if response.ok:
-                        print("Запрос успешно выполнен")
-                    else:
-                        print("Запрос не выполнен")
-                    print("Код статуса:", response.status_code)
-                except Exception as err:
-                    print("Ошибка:", err)
-                response = response.json()
+                        auth=HTTPBasicAuth(login, password))
+                    response_code = response
+                    response = response.json()
+                    print(response_code.status_code)
+                except requests.exceptions.RequestException as err:
+                    print(response_code.status_code)
+                    raise SystemExit(err)
                 new_df = pd.DataFrame(response['accounts'])
                 new_df['user_id'] = up
                 df = pd.concat([df, new_df], ignore_index=True)
         else:
-            response = requests.get(f'{url_get}/{domain}/{self.login}',
+            try:
+                response = requests.get(f'{url_get}/{domain}/{self.login}',
                              auth=HTTPBasicAuth(login, password))
-            if response.ok:
-                print("Запрос успешно выполнен")
-            else:
-                print("Запрос не выполнен")
-            print("Код статуса:", response.status_code)
-            response = response.json()
+                response_code = response
+                response = response.json()
+                print(response_code.status_code)
+            except requests.exceptions.RequestException as err:
+                print(response_code.status_code)
+                raise SystemExit(err)
             df = pd.DataFrame(response['accounts'])
             df['user_id'] = self.login
         categories = pd.DataFrame()
@@ -85,7 +84,6 @@ class UsersInfo:
         else:
             return df
 
-        
     def google_sheets(self, table_type):
         df = user.get_accounts_info(table_type)
         key = "/Users/Taisia1/Desktop/octacode/deposite/creds.json"
@@ -98,7 +96,6 @@ class UsersInfo:
             copy_index=False, header=True
         )
 
-
     def change_value(self, accountCode, categoryCode, value):
         config = configparser.ConfigParser()
         config.read("/Users/Taisia1/Desktop/octacode/deposite/config.ini")
@@ -109,11 +106,9 @@ class UsersInfo:
             response = requests.put(
                 f'{url_put}/{accountCode}/category/{categoryCode}/',
                 json={"value": f"{value}"}, auth=HTTPBasicAuth(login, password))
-            if response.ok:
-                print("Запрос успешно выполнен")
-            else:
-                print("Запрос не выполнен")
-            print("Код статуса:", response.status_code)
-        except Exception as err:
-            print("Ошибкаa:", err)
+            response = response.json()
+            print(response.status_code)
+        except requests.exceptions.RequestException as err:
+            print(response.status_code)
+            raise SystemExit(err)
 
