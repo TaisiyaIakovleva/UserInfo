@@ -14,7 +14,8 @@ from gspread_dataframe import get_as_dataframe, set_with_dataframe
 import logging
 
 class UsersInfo:
-
+    logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="w",
+                        format="%(filename)s %(asctime)s %(levelname)s %(message)s")
     def __init__(self, user_id):
         if type(user_id) == str:
             self.flag = str
@@ -32,8 +33,6 @@ class UsersInfo:
         if self.flag == list:
             df = pd.DataFrame()
             for up in self.login:
-                logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="w",
-                                    format="%(filename)s %(asctime)s %(levelname)s %(message)s")
                 try:
 
                     response = requests.get(
@@ -41,27 +40,25 @@ class UsersInfo:
                         auth=HTTPBasicAuth(login, password))
                     response_code = response
                     response = response.json()
-                    logging.info(f"get info successful with result: {response_code.status_code}.")
+                    logging.info(f"get info: successful with result: {response_code.status_code}.")
                     print(response_code.status_code)
                 except requests.exceptions.RequestException as err:
-                    logging.error(f"requests.exceptions.RequestException: {response_code.status_code}", exc_info=True)
+                    logging.error(f"get info: requests.exceptions.RequestException: {response_code.status_code}", exc_info=True)
                     print(response_code.status_code)
                     raise SystemExit(err)
                 new_df = pd.DataFrame(response['accounts'])
                 new_df['user_id'] = up
                 df = pd.concat([df, new_df], ignore_index=True)
         else:
-            logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="w",
-                                format="%(filename)s %(asctime)s %(levelname)s %(message)s")
             try:
                 response = requests.get(f'{url_get}/{domain}/{self.login}',
                              auth=HTTPBasicAuth(login, password))
                 response_code = response
                 response = response.json()
-                logging.info(f"get info successful with result: {response_code.status_code}.")
+                logging.info(f"get info: successful with result: {response_code.status_code}.")
                 print(response_code.status_code)
             except requests.exceptions.RequestException as err:
-                logging.error(f"requests.exceptions.RequestException: {response_code.status_code}", exc_info=True)
+                logging.error(f"get info: requests.exceptions.RequestException: {response_code.status_code}", exc_info=True)
                 print(response_code.status_code)
                 raise SystemExit(err)
             df = pd.DataFrame(response['accounts'])
@@ -111,19 +108,20 @@ class UsersInfo:
         login = config["userInfo"]["login"]
         password = config["userInfo"]["passwd"]
         url_put = config["userInfo"]["url_put"]
-        logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="w",
-                            format="%(asctime)s %(levelname)s %(message)s")
         try:
             response = requests.put(
                 f'{url_put}/{accountCode}/category/{categoryCode}/',
                 json={"value": f"{value}"}, auth=HTTPBasicAuth(login, password))
             response = response.json()
-            logging.info(f"change_value successful with result: {response.status_code}.")
+            logging.info(f"change_value: successful with result: {response.status_code}.")
             print(response.status_code)
         except requests.exceptions.RequestException as err:
-            logging.error(f"requests.exceptions.RequestException: {response.status_code}", exc_info=True)
+            logging.error(f"change_value: requests.exceptions.RequestException: {response.status_code}", exc_info=True)
             print(response.status_code)
             raise SystemExit(err)
+
+
+
 
 user_id = 'ud632544530'
 user = UsersInfo(user_id)
