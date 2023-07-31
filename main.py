@@ -11,7 +11,7 @@ from sqlalchemy import create_engine, text
 import gspread
 import pygsheets
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
-
+import logging
 
 class UsersInfo:
 
@@ -24,7 +24,7 @@ class UsersInfo:
 
     def get_accounts_info(self, table_type):
         config = configparser.ConfigParser()
-        config.read("/Users/Taisia1/Desktop/octacode/deposite/config.ini")
+        config.read("/Users/Taisia1/Desktop/octacode/config.ini")
         domain = config["userInfo"]["domain"]
         login = config["userInfo"]["login"]
         password = config["userInfo"]["passwd"]
@@ -32,27 +32,36 @@ class UsersInfo:
         if self.flag == list:
             df = pd.DataFrame()
             for up in self.login:
+                logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="w",
+                                    format="%(filename)s %(asctime)s %(levelname)s %(message)s")
                 try:
+
                     response = requests.get(
                             f'{url_get}/{domain}/{up}',
                         auth=HTTPBasicAuth(login, password))
                     response_code = response
                     response = response.json()
+                    logging.info(f"get info successful with result: {response_code.status_code}.")
                     print(response_code.status_code)
                 except requests.exceptions.RequestException as err:
+                    logging.error(f"requests.exceptions.RequestException: {response_code.status_code}", exc_info=True)
                     print(response_code.status_code)
                     raise SystemExit(err)
                 new_df = pd.DataFrame(response['accounts'])
                 new_df['user_id'] = up
                 df = pd.concat([df, new_df], ignore_index=True)
         else:
+            logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="w",
+                                format="%(filename)s %(asctime)s %(levelname)s %(message)s")
             try:
                 response = requests.get(f'{url_get}/{domain}/{self.login}',
                              auth=HTTPBasicAuth(login, password))
                 response_code = response
                 response = response.json()
+                logging.info(f"get info successful with result: {response_code.status_code}.")
                 print(response_code.status_code)
             except requests.exceptions.RequestException as err:
+                logging.error(f"requests.exceptions.RequestException: {response_code.status_code}", exc_info=True)
                 print(response_code.status_code)
                 raise SystemExit(err)
             df = pd.DataFrame(response['accounts'])
@@ -98,17 +107,28 @@ class UsersInfo:
 
     def change_value(self, accountCode, categoryCode, value):
         config = configparser.ConfigParser()
-        config.read("/Users/Taisia1/Desktop/octacode/deposite/config.ini")
+        config.read("/Users/Taisia1/Desktop/octacode/config.ini")
         login = config["userInfo"]["login"]
         password = config["userInfo"]["passwd"]
         url_put = config["userInfo"]["url_put"]
+        logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="w",
+                            format="%(asctime)s %(levelname)s %(message)s")
         try:
             response = requests.put(
                 f'{url_put}/{accountCode}/category/{categoryCode}/',
                 json={"value": f"{value}"}, auth=HTTPBasicAuth(login, password))
             response = response.json()
+            logging.info(f"change_value successful with result: {response.status_code}.")
             print(response.status_code)
         except requests.exceptions.RequestException as err:
+            logging.error(f"requests.exceptions.RequestException: {response.status_code}", exc_info=True)
             print(response.status_code)
             raise SystemExit(err)
 
+user_id = 'ud632544530'
+user = UsersInfo(user_id)
+
+b = (user.get_accounts_info(1))
+a = (user.change_value("BTC_ud632544530_1", "Margining", "SVT_Leverage_5"))
+print(b)
+pass

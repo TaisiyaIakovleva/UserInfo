@@ -6,7 +6,7 @@ class Connect:
 
     def connect_api_devex(self):
         config = configparser.ConfigParser()
-        config.read("/Users/Taisia1/Desktop/octacode/deposite/config.ini")
+        config.read("/Users/Taisia1/Desktop/octacode/config.ini")
         username = config["dxcore"]["username"]
         passwd = config["dxcore"]["passwd"]
         host = config["dxcore"]["host"]
@@ -17,6 +17,4 @@ class Connect:
         except Exception as err:
             print(err)
         return engine
-
-
 
