@@ -27,7 +27,7 @@ class UsersInfo:
             self.flag = list
         self.login = user_id
 
-    def read_config(self):
+    def _read_config(self):
         config = configparser.ConfigParser()
         config.read("/Users/Taisia1/Desktop/octacode/config.ini")
         login = config["userInfo"]["login"]
@@ -35,15 +35,16 @@ class UsersInfo:
         return login, password
 
     def get_accounts_info(self, table_type):
-        login, password = self.read_config()
+        login, password = self._read_config()
         if self.flag == list:
             df = pd.DataFrame()
             for up in self.login:
+                response = requests.get(
+                    f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/client/default/{up}',
+                    auth=HTTPBasicAuth(login, password))
                 try:
-                    response = requests.get(
-                            f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/client/default/{up}',
-                        auth=HTTPBasicAuth(login, password))
                     response_code = response
+                    response_code.raise_for_status()
                     response = response.json()
                     logging.info(f"get info: successful with result: {response_code.status_code}.")
                     print(response_code.status_code)
@@ -55,10 +56,12 @@ class UsersInfo:
                 new_df['user_id'] = up
                 df = pd.concat([df, new_df], ignore_index=True)
         else:
+            response = requests.get(
+                f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/client/default/{self.login}',
+                auth=HTTPBasicAuth(login, password))
             try:
-                response = requests.get(f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/client/default/{self.login}',
-                             auth=HTTPBasicAuth(login, password))
                 response_code = response
+                response_code.raise_for_status()
                 response = response.json()
                 logging.info(f"get info: successful with result: {response_code.status_code}.")
                 print(response_code.status_code)
@@ -95,24 +98,26 @@ class UsersInfo:
         else:
             return df
 
-    def google_sheets(self, table_type):
+    def google_sheets(self, table_type, clear=True, x=1, y=1):
         df = user.get_accounts_info(table_type)
         key = "/Users/Taisia1/Desktop/octacode/deposite/creds.json"
         client = pygsheets.authorize(service_file=key)
         sh = client.open("order_statistics")
         wks = sh.worksheet_by_title('UserInfo')
-        wks.clear()
+        if clear:
+            wks.clear()
         wks.set_dataframe(
-            df, (1, 1),
+            df, (y, x),
             copy_index=False, header=True
         )
 
     def change_value(self, accountCode, categoryCode, value):
-        login, password = self.read_config()
+        login, password = self._read_config()
+        response = requests.put(
+            f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/account/LIVE/{accountCode}/category/{categoryCode}/',
+            json={"value": f"{value}"}, auth=HTTPBasicAuth(login, password))
         try:
-            response = requests.put(
-                f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/account/LIVE/{accountCode}/category/{categoryCode}/',
-                json={"value": f"{value}"}, auth=HTTPBasicAuth(login, password))
+            response.raise_for_status()
             response = response.json()
             logging.info(f"change_value: successful with result: {response.status_code}.")
             print(response.status_code)
@@ -122,15 +127,14 @@ class UsersInfo:
             raise SystemExit(err)
 
     def transfer(self, clearingCode, accountCode, currency, amount, description):
-        login, password = self.read_config()
+        login, password = self._read_config()
         id = uuid.uuid4()
+        response = requests.put(
+            f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/account/{clearingCode}/{accountCode}/adjustment/{id}',
+            json={"currency": f"{currency}", "amount": f"{amount}", "description": f"{description}"},
+            auth=HTTPBasicAuth(login, password))
         try:
-            response = requests.put(
-                f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/account/{clearingCode}/{accountCode}/adjustment/{id}',
-                json={"currency": f"{currency}", "amount": f"{amount}", "description": f"{description}"},
-                auth=HTTPBasicAuth(login, password))
-            if response.status_code != 201:
-                raise Exception
+            response.raise_for_status()
             logging.info(f"""transfer: successful with result: {response.status_code}.
             clearingCode: "{clearingCode}",
             accountCode: "{accountCode}",
