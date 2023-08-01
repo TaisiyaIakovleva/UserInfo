@@ -12,29 +12,36 @@ import gspread
 import pygsheets
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 import logging
+import uuid
+
 
 class UsersInfo:
+
     logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="w",
                         format="%(filename)s %(asctime)s %(levelname)s %(message)s")
+
     def __init__(self, user_id):
         if type(user_id) == str:
             self.flag = str
         else:
             self.flag = list
         self.login = user_id
+        self.config = self.read_config()
 
-    def get_accounts_info(self, table_type):
+    def read_config(self):
         config = configparser.ConfigParser()
         config.read("/Users/Taisia1/Desktop/octacode/config.ini")
-        domain = config["userInfo"]["domain"]
-        login = config["userInfo"]["login"]
-        password = config["userInfo"]["passwd"]
-        url_get = config["userInfo"]["url_get"]
+        return config
+
+    def get_accounts_info(self, table_type):
+        domain = self.config["userInfo"]["domain"]
+        login = self.config["userInfo"]["login"]
+        password = self.config["userInfo"]["passwd"]
+        url_get = self.config["userInfo"]["url_get"]
         if self.flag == list:
             df = pd.DataFrame()
             for up in self.login:
                 try:
-
                     response = requests.get(
                             f'{url_get}/{domain}/{up}',
                         auth=HTTPBasicAuth(login, password))
@@ -103,11 +110,9 @@ class UsersInfo:
         )
 
     def change_value(self, accountCode, categoryCode, value):
-        config = configparser.ConfigParser()
-        config.read("/Users/Taisia1/Desktop/octacode/config.ini")
-        login = config["userInfo"]["login"]
-        password = config["userInfo"]["passwd"]
-        url_put = config["userInfo"]["url_put"]
+        login = self.config["userInfo"]["login"]
+        password = self.config["userInfo"]["passwd"]
+        url_put = self.config["userInfo"]["url_put"]
         try:
             response = requests.put(
                 f'{url_put}/{accountCode}/category/{categoryCode}/',
@@ -120,13 +125,29 @@ class UsersInfo:
             print(response.status_code)
             raise SystemExit(err)
 
-
-
-
-user_id = 'ud632544530'
-user = UsersInfo(user_id)
-
-b = (user.get_accounts_info(1))
-a = (user.change_value("BTC_ud632544530_1", "Margining", "SVT_Leverage_5"))
-print(b)
-pass
+    def transfer(self, clearingCode, accountCode, currency, amount, description):
+        login = self.config["userInfo"]["login"]
+        password = self.config["userInfo"]["passwd"]
+        url_currency = self.config["userInfo"]["url_currency"]
+        id = uuid.uuid4()
+        try:
+            response = requests.put(
+                f'{url_currency}/{clearingCode}/{accountCode}/adjustment/{id}',
+                json={"currency": f"{currency}", "amount": f"{amount}", "description": f"{description}"},
+                auth=HTTPBasicAuth(login, password))
+            if response.status_code == 201:
+                logging.info(f"""transfer: successful with result: {response.status_code}.
+                clearingCode: "{clearingCode}",
+                accountCode: "{accountCode}",
+                uuid: "{id}",
+                currency: "{currency}", 
+                amount: "{amount}", 
+                description: "{description}"
+                """)
+            else:
+                logging.info(f"transfer error: {response.status_code}.")
+            print(response.status_code)
+        except requests.exceptions.RequestException as err:
+            logging.error(f"transfer: requests.exceptions.RequestException: {response.status_code}", exc_info=True)
+            print(response.status_code)
+            raise SystemExit(err)
