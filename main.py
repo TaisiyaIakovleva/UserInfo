@@ -26,24 +26,22 @@ class UsersInfo:
         else:
             self.flag = list
         self.login = user_id
-        self.config = self.read_config()
 
     def read_config(self):
         config = configparser.ConfigParser()
         config.read("/Users/Taisia1/Desktop/octacode/config.ini")
-        return config
+        login = config["userInfo"]["login"]
+        password = config["userInfo"]["passwd"]
+        return login, password
 
     def get_accounts_info(self, table_type):
-        domain = self.config["userInfo"]["domain"]
-        login = self.config["userInfo"]["login"]
-        password = self.config["userInfo"]["passwd"]
-        url_get = self.config["userInfo"]["url_get"]
+        login, password = self.read_config()
         if self.flag == list:
             df = pd.DataFrame()
             for up in self.login:
                 try:
                     response = requests.get(
-                            f'{url_get}/{domain}/{up}',
+                            f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/client/default/{up}',
                         auth=HTTPBasicAuth(login, password))
                     response_code = response
                     response = response.json()
@@ -58,7 +56,7 @@ class UsersInfo:
                 df = pd.concat([df, new_df], ignore_index=True)
         else:
             try:
-                response = requests.get(f'{url_get}/{domain}/{self.login}',
+                response = requests.get(f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/client/default/{self.login}',
                              auth=HTTPBasicAuth(login, password))
                 response_code = response
                 response = response.json()
@@ -110,12 +108,10 @@ class UsersInfo:
         )
 
     def change_value(self, accountCode, categoryCode, value):
-        login = self.config["userInfo"]["login"]
-        password = self.config["userInfo"]["passwd"]
-        url_put = self.config["userInfo"]["url_put"]
+        login, password = self.read_config()
         try:
             response = requests.put(
-                f'{url_put}/{accountCode}/category/{categoryCode}/',
+                f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/account/LIVE/{accountCode}/category/{categoryCode}/',
                 json={"value": f"{value}"}, auth=HTTPBasicAuth(login, password))
             response = response.json()
             logging.info(f"change_value: successful with result: {response.status_code}.")
@@ -126,28 +122,25 @@ class UsersInfo:
             raise SystemExit(err)
 
     def transfer(self, clearingCode, accountCode, currency, amount, description):
-        login = self.config["userInfo"]["login"]
-        password = self.config["userInfo"]["passwd"]
-        url_currency = self.config["userInfo"]["url_currency"]
+        login, password = self.read_config()
         id = uuid.uuid4()
         try:
             response = requests.put(
-                f'{url_currency}/{clearingCode}/{accountCode}/adjustment/{id}',
+                f'https://cexstage.prosp.devexperts.com/dxweb/rest/api/register/account/{clearingCode}/{accountCode}/adjustment/{id}',
                 json={"currency": f"{currency}", "amount": f"{amount}", "description": f"{description}"},
                 auth=HTTPBasicAuth(login, password))
-            if response.status_code == 201:
-                logging.info(f"""transfer: successful with result: {response.status_code}.
-                clearingCode: "{clearingCode}",
-                accountCode: "{accountCode}",
-                uuid: "{id}",
-                currency: "{currency}", 
-                amount: "{amount}", 
-                description: "{description}"
-                """)
-            else:
-                logging.info(f"transfer error: {response.status_code}.")
+            if response.status_code != 201:
+                raise Exception
+            logging.info(f"""transfer: successful with result: {response.status_code}.
+            clearingCode: "{clearingCode}",
+            accountCode: "{accountCode}",
+            uuid: "{id}",
+            currency: "{currency}", 
+            amount: "{amount}", 
+            description: "{description}"
+            """)
             print(response.status_code)
-        except requests.exceptions.RequestException as err:
-            logging.error(f"transfer: requests.exceptions.RequestException: {response.status_code}", exc_info=True)
+        except Exception as err:
+            logging.error(f"transfer error: {response.status_code}", exc_info=True)
             print(response.status_code)
             raise SystemExit(err)
